@@ -18,7 +18,7 @@ function reduce(state, action) {
   }
 }
 
-export function useAsyncMemo(asyncCallBack, initialState, dependencies) {
+export function useAsyncMemo(initialState) {
   const [state, dispatch] = React.useReducer(reduce, {
     status: 'idle',
     data: null,
@@ -27,10 +27,7 @@ export function useAsyncMemo(asyncCallBack, initialState, dependencies) {
     ...initialState,
   })
 
-  React.useEffect(() => {
-    // Users of the useAsync API will need to return a promise if they want the Async procedure to carry on.
-    // If they asyncCallback is falsey, the procedure will not execute.
-    const promise = asyncCallBack()
+  const run = React.useCallback(promise => {
     if (!promise) {
       return
     }
@@ -44,12 +41,10 @@ export function useAsyncMemo(asyncCallBack, initialState, dependencies) {
         dispatch({type: 'rejected', error})
       },
     )
-    // since we can not known the dependency array of our hook users we will accept a prop with these specified
-    // naming asyncCallback as a dependency is not a solution, because it would effectively be the same as not
-    // specifying a depdency array, e.g.: it would likely cause a re-render everytime (for most use cases)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, dependencies)
+    // We could pass an empty array as dependency list, because:
+    // 1. useReducer ensures that dispatch function reference never changes
+    // 2. promise is a dependency that we are taking in as an argument, so that will never change either
+  }, [dispatch])
 
-  // A custom React hook, much like our Vue composition API hooks, need to expose the data we want to the outside world
-  return state
+  return {...state, run}
 };
