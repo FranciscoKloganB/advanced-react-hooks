@@ -3,7 +3,13 @@
 // 1. 💯 accept the step as the action
 import * as React from 'react'
 
-const countReducer = (state, newState) => ({...state, ...newState})
+const countReducer = (state, action) => {
+  if (typeof action === 'function') {
+    return { ...state, ...action()}
+  }
+  
+  return {...state, ...action}
+}
 
 function Counter({initialCount = 0, step = 1}) {
   const [state, setState] = React.useReducer(countReducer, {
@@ -11,10 +17,17 @@ function Counter({initialCount = 0, step = 1}) {
   })
 
   const {count} = state
-  
-  const increment = () => setState({count: count + step})
 
-  return <button onClick={increment}>{count}</button>
+  const increment = () => setState({count: count + step})
+  const incrementWithFunction = () => setState(() => ({count: count + step}))
+  return (
+    <div>
+      <p>Increment with object:</p>
+      <button onClick={increment}>{count}</button>
+      <p>Increment with function:</p>
+      <button onClick={incrementWithFunction}>{count}</button>
+    </div>
+  )
 }
 
 function App() {
