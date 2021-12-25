@@ -9,20 +9,18 @@ import {
   PokemonInfoFallback,
   PokemonErrorBoundary,
 } from '../pokemon'
-import {useAsync} from '../hooks/useAsync'
+import {useAsyncV2} from '../hooks/useAsyncV2'
 
 function PokemonInfo({pokemonName}) {
-  const state = useAsync(
-    () => {
-      // Returning early on this anonymous function cancels execution of useAsync asyncCallback <= undefined is falsey
-      if (!pokemonName) {
-        return
-      }
+  const fetchPokemonAsyncCallback = React.useCallback(() => {
+    if (pokemonName) {
       return fetchPokemon(pokemonName)
-    },
-    {status: pokemonName ? 'pending' : 'idle'},
-    [pokemonName],
-  )
+    }
+  }, [pokemonName])
+
+  const state = useAsyncV2(fetchPokemonAsyncCallback, {
+    status: pokemonName ? 'pending' : 'idle',
+  })
 
   const {data: pokemon, status, error} = state
 
