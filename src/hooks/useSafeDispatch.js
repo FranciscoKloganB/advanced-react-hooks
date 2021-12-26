@@ -3,7 +3,8 @@ import * as React from 'react'
 export function useSafeDispatch(unsafeDispatch) {
   const mountedRef = React.useRef(false)
 
-  React.useEffect(() => {
+  // `useLayoutEffect` is similar to `useEffect` but runs onMount before screen paint and onUnmount before anything else
+  React.useLayoutEffect(() => {
     mountedRef.current = true
 
     return () => (mountedRef.current = false)
