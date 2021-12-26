@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useSafeDispatch } from './useSafeDispatch'
 
 // 🐨 this is going to be our generic asyncReducer
 function reduce(state, action) {
@@ -20,15 +21,6 @@ function reduce(state, action) {
 
 export function useAsyncMemo(initialState) {
   // calling unsafeDispatch directly might cause memory leaks when promise resolves and component is not mounted
-  const mountedRef = React.useRef(false)
-
-  React.useEffect(() => {
-    mountedRef.current = true
-
-    return () => (mountedRef.current = false)
-    // No dependencies, only want to call on mount and before unmount
-  }, [])
-
   const [state, unsafeDispatch] = React.useReducer(reduce, {
     status: 'idle',
     data: null,
@@ -37,13 +29,8 @@ export function useAsyncMemo(initialState) {
     ...initialState,
   })
 
-  const dispatch = React.useCallback((...args) => {
-    if (mountedRef.current) {
-      unsafeDispatch(...args)
-    }
-    // no dependencies because useReducer dispatch function never changes (is stable)
-  }, [])
-
+  const dispatch = useSafeDispatch(unsafeDispatch)
+  
   const run = React.useCallback(
     promise => {
       if (!promise) {
