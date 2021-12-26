@@ -19,7 +19,17 @@ function reduce(state, action) {
 }
 
 export function useAsyncMemo(initialState) {
-  const [state, dispatch] = React.useReducer(reduce, {
+  // calling unsafeDispatch directly might cause memory leaks when promise resolves and component is not mounted
+  const mountedRef = React.useRef(false)
+
+  React.useEffect(() => {
+    mountedRef.current = true
+
+    return () => (mountedRef.current = false)
+    // No dependencies, only want to call on mount and before unmount
+  }, [])
+
+  const [state, unsafeDispatch] = React.useReducer(reduce, {
     status: 'idle',
     data: null,
     error: null,
@@ -27,24 +37,41 @@ export function useAsyncMemo(initialState) {
     ...initialState,
   })
 
-  const run = React.useCallback(promise => {
-    if (!promise) {
-      return
+  const dispatch = React.useCallback((...args) => {
+    if (mountedRef.current) {
+      unsafeDispatch(...args)
     }
+    // no dependencies because useReducer dispatch function never changes (is stable)
+  }, [])
 
-    dispatch({type: 'pending'})
-    promise.then(
-      data => {
-        dispatch({type: 'resolved', data})
-      },
-      error => {
-        dispatch({type: 'rejected', error})
-      },
-    )
-    // We could pass an empty array as dependency list, because:
-    // 1. useReducer ensures that dispatch function reference never changes
-    // 2. promise is a dependency that we are taking in as an argument, so that will never change either
-  }, [dispatch])
+  const run = React.useCallback(
+    promise => {
+      if (!promise) {
+        return
+      }
+
+      dispatch({type: 'pending'})
+      promise
+        .then(
+          data => {
+            dispatch({type: 'resolved', data})
+          },
+          error => {
+            dispatch({type: 'rejected', error})
+          },
+        )
+        .catch(error => {
+          if (error.name !== 'AbortError') {
+            throw error
+          }
+          console.warn('useAsyncMemo asyncCallback: promise abortion handled', promise)
+        })
+      // We could pass an empty array as dependency list, because:
+      // 1. useReducer ensures that dispatch function reference never changes
+      // 2. promise is a dependency that we are taking in as an argument, so that will never change either
+    },
+    [dispatch],
+  )
 
   return {...state, run}
-};
+}
