@@ -15,23 +15,23 @@ import {CacheProvider, useCache} from '../hooks/useCache'
 
 function PokemonInfo({pokemonName}) {
   // 🐨 get the cache and dispatch from useContext with PokemonCacheContext
-  const [cache, dispatch] = useCache()
+  const [, cacheGet, cacheSet] = useCache()
   const {data: pokemon, status, error, run, setData} = useAsync()
 
   React.useEffect(() => {
     if (!pokemonName) {
       return
-    } else if (cache[pokemonName]) {
-      setData(cache[pokemonName])
+    } else if (cacheGet(pokemonName)) {
+      setData(cacheGet(pokemonName))
     } else {
       run(
         fetchPokemon(pokemonName).then(pokemonData => {
-          dispatch({type: 'SET_KEY', key: pokemonName, value: pokemonData})
+          cacheSet(pokemonName, pokemonData)
           return pokemonData
         }),
       )
     }
-  }, [cache, dispatch, pokemonName, run, setData])
+  }, [cacheGet, cacheSet, pokemonName, run, setData])
 
   if (status === 'idle') {
     return 'Submit a pokemon'
